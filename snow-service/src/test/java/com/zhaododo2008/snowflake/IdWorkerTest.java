@@ -4,6 +4,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.zhaododo2008.snowflake.service.IdWorker;
+
 public class IdWorkerTest {
 
   static class IdWorkThread implements Runnable {

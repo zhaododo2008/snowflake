@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- 从高到地低 OFF 、 FATAL 、 ERROR 、 WARN 、 INFO 、 DEBUG 、 TRACE 、 ALL -->
+<!-- 日志输出规则  根据当前ROOT 级别，日志输出时，级别高于root默认的级别时  会输出 -->
+<!-- 以下  每个配置的 filter 是过滤掉输出文件里面，会出现高级别文件，依然出现低级别的日志信息，通过filter 过滤只记录本级别的日志-->
+
+
+<!-- 属性描述 scan：性设置为true时，配置文件如果发生改变，将会被重新加载，默认值为true scanPeriod:设置监测配置文件是否有修改的时间间隔，如果没有给出时间单位，默认单位是毫秒。当scan为true时，此属性生效。默认的时间间隔为1分钟。
+    debug:当此属性设置为true时，将打印出logback内部日志信息，实时查看logback运行状态。默认值为false。 -->
+<configuration scan="true" scanPeriod="60 seconds" debug="false">
+    <!-- 日志最大的历史 7天 -->
+    <property name="maxHistory" value="7"/>
+    <!-- 日志最大的文件大小 10MB-->
+    <property name="maxFileSize" value="10MB"/>
+    <property name="maxHistory" value="10"/>
+    <property name="catalina.home" value="/Users/zhaododo/snowlogs"/>
+    
+    
+    <!-- ConsoleAppender 控制台输出日志 -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- 对日志进行格式化 -->
+        <encoder>
+            <pattern>[%X{X-B3-TraceId:-},%X{X-B3-SpanId:-},%X{X-Span-Export:-}] - %-5level [%thread] %logger{35} - %m%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- WARN级别日志 appender -->
+    <appender name="WARN" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 过滤器，过滤掉 TRACE 和 DEBUG 和 INFO 级别的日志 -->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- 按天回滚 daily -->
+            <fileNamePattern>${catalina.home}/logs/%d{yyyy-MM-dd}/warn-log.log</fileNamePattern>
+            <!-- 日志最大的保存天数 -->
+            <maxHistory>${maxHistory}</maxHistory>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>${maxFileSize}</maxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- DEBUG、INFO、WARN、ERROR级别日志 appender -->
+    <appender name="DEBUG_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${catalina.home}/logs/%d{yyyy-MM-dd}/debug-log.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>${catalina.home}/logs/archived/debug.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <!-- or whenever the file size reaches 100MB -->
+                <maxFileSize>${maxFileSize}</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <!-- keep 30 days' worth of history -->
+            <maxHistory>${maxHistory}</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>[%X{X-B3-TraceId:-},%X{X-B3-SpanId:-},%X{X-Span-Export:-}] %d{yyyy-MM-dd HH:mm:ss.SSS}  %-5level [%thread] %logger{35} - %m%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 数据库操作日志 -->
+    <logger name="java.sql.PreparedStatement" value="INFO" />
+    <logger name="java.sql.Connection" value="INFO" />
+    <logger name="java.sql.Statement" value="INFO" />
+    <logger name="com.ibatis" value="INFO" />
+    <logger name="com.ibatis.common.jdbc.SimpleDataSource" value="INFO" />
+    <logger name="com.ibatis.common.jdbc.ScriptRunner" level="INFO"/>
+    <logger name="com.ibatis.sqlmap.engine.impl.SqlMapClientDelegate" value="INFO" />
+
+    <!-- root级别   DEBUG -->
+    <root level="INFO">
+        <!-- 控制台输出 -->
+        <appender-ref ref="STDOUT" />
+        <!-- 文件输出 -->
+        <appender-ref ref="DEBUG" />
+        <appender-ref ref="WARN" />
+    </root>
+
+    <!-- resources -->
+    <logger name="TRACE" additivity="true">
+        <level value="TRACE"/>
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <logger name="com.ibatis" level="DEBUG" additivity="false">
+        <appender-ref ref="DEBUG_LOG" />
+    </logger>
+    <logger name="com.ibatis.common.jdbc.SimpleDataSource" level="DEBUG" additivity="false">
+        <appender-ref ref="DEBUG_LOG" />
+    </logger>
+    <logger name="com.ibatis.common.jdbc.ScriptRunner" level="DEBUG" additivity="false">
+        <appender-ref ref="DEBUG_LOG" />
+    </logger>
+    <logger name="com.ibatis.sqlmap.engine.impl.SqlMapClientDelegate" level="DEBUG" additivity="false">
+        <appender-ref ref="DEBUG_LOG" />
+    </logger>
+    <logger name="java.sql.Connection" level="DEBUG" additivity="false">
+        <appender-ref ref="DEBUG_LOG" />
+    </logger>
+    <logger name="java.sql.Statement" level="DEBUG" additivity="false">
+        <appender-ref ref="DEBUG_LOG" />
+    </logger>
+    <logger name="java.sql.PreparedStatement" level="DEBUG" additivity="false">
+        <appender-ref ref="DEBUG_LOG" />
+    </logger>
+
+</configuration>
