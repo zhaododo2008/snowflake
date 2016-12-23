@@ -46,7 +46,7 @@
 
     <!-- DEBUG、INFO、WARN、ERROR级别日志 appender -->
     <appender name="DEBUG_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${catalina.home}/logs/%d{yyyy-MM-dd}/debug-log.log</file>
+        <file>${catalina.home}/logs/debug-log.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- daily rollover -->
             <fileNamePattern>${catalina.home}/logs/archived/debug.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
@@ -76,7 +76,7 @@
         <!-- 控制台输出 -->
         <appender-ref ref="STDOUT" />
         <!-- 文件输出 -->
-        <appender-ref ref="DEBUG" />
+        <appender-ref ref="DEBUG_LOG" />
         <appender-ref ref="WARN" />
     </root>
 
