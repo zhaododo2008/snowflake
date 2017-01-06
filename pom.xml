@@ -32,5 +32,6 @@
   	<module>snow-dal</module>
   	<module>snow-service</module>
     <module>snow-web</module>
+    <module>snow-core</module>
   </modules>
 </project>
