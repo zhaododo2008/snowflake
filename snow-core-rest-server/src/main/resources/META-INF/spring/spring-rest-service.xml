@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+
+        <bean id="serviceServerRegister" class="com.zhaododo.core.rest.server.register.impl.ZookeeperRegister">
+            <constructor-arg name="client" ref="curatorFramework"/>
+            <constructor-arg name="basePath" value="${service_rootpath:/yh/services}"/>
+        </bean>
+
+        <bean id="serviceDiscovery" class="com.zhaododo.core.rest.server.discovery.SnowServiceDiscovery">
+            <property name="context" value="${web.context}"/>
+            <property name="port" value="${web.port:default}"/>
+            <property name="register" ref="serviceServerRegister"/>
+        </bean>
+
+</beans>  
