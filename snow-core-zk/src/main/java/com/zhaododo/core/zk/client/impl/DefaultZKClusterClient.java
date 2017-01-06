@@ -26,177 +26,168 @@ import com.zhaododo.core.zk.model.CreateMode;
 import com.zhaododo.core.zk.model.Node;
 import com.zhaododo.core.zk.util.ZkPathUtils;
 
-/**
- * 默认zk集群的操作client<br>
- * @author xieyong
- *
- */
 public class DefaultZKClusterClient implements ZKClusterClient {
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
+  private final Logger log = LoggerFactory.getLogger( getClass() );
 
-    private CuratorFramework client;
+  private CuratorFramework client;
 
-    private Map<String, DefaultNodeCacheListener> watchMap = Maps.newConcurrentMap();
+  private Map<String, DefaultNodeCacheListener> watchMap = Maps.newConcurrentMap();
 
-    private List<ZKConnectionListener> zkConnectionListeners = new CopyOnWriteArrayList<ZKConnectionListener>();
+  private List<ZKConnectionListener> zkConnectionListeners = new CopyOnWriteArrayList<ZKConnectionListener>();
 
-    private volatile boolean isConnected = false;
+  private volatile boolean isConnected = false;
 
-    private Charset charset = Charset.forName("UTF-8");
+  private Charset charset = Charset.forName( "UTF-8" );
 
-    public DefaultZKClusterClient(CuratorFramework client) {
-        this.client = client;
+  public DefaultZKClusterClient( CuratorFramework client ) {
+    this.client = client;
+  }
+
+  public void createNode( String path, String value, CreateMode mode ) {
+    Preconditions.checkNotNull( path, "path can't be null" );
+    Preconditions.checkNotNull( value, "value can't be null" );
+    checkConnection();
+    try {
+      client.create().creatingParentsIfNeeded().withMode( CreateMode.findByValue( mode.getValue() ) ).forPath( path,
+          value.getBytes( charset ) );
+    } catch ( Exception e ) {
+      log.error( "create path failed:{},value:{}", path, value );
+      throw new ZKOperateException( "create path failed:" + path, e );
     }
+  }
 
-	public void createNode(String path, String value, CreateMode mode) {
-        Preconditions.checkNotNull(path, "path can't be null");
-        Preconditions.checkNotNull(value, "value can't be null");
-        checkConnection();
-        try {
-            client.create().creatingParentsIfNeeded().withMode(CreateMode.findByValue(mode.getValue()))
-                    .forPath(path, value.getBytes(charset));
-        } catch (Exception e) {
-            log.error("create path failed:{},value:{}", path, value);
-            throw new ZKOperateException("create path failed:" + path, e);
-        }
+  public String getNodeValue( String path ) {
+    Preconditions.checkNotNull( path, "path can't be null" );
+    checkConnection();
+    try {
+      byte[] bytes = client.getData().forPath( path );
+      return new String( bytes, charset );
+    } catch ( Exception e ) {
+      log.error( "getNodeValue path failed:{}", path );
+      throw new ZKOperateException( "getNodeValue path failed:" + path, e );
     }
+  }
 
-	public String getNodeValue(String path) {
-        Preconditions.checkNotNull(path, "path can't be null");
-        checkConnection();
-        try {
-            byte[] bytes = client.getData().forPath(path);
-            return new String(bytes, charset);
-        } catch (Exception e) {
-            log.error("getNodeValue path failed:{}", path);
-            throw new ZKOperateException("getNodeValue path failed:" + path, e);
-        }
+  public List<Node> getChildNodes( String path ) {
+    Preconditions.checkNotNull( path, "path can't be null" );
+    checkConnection();
+    try {
+      List<String> paths = client.getChildren().forPath( path );
+      if ( CollectionUtils.isEmpty( paths ) ) {
+        return Lists.newArrayList();
+      }
+      List<Node> nodes = new ArrayList<Node>( paths.size() );
+      for ( String vpath : paths ) {
+        byte[] bytes = client.getData().forPath( ZKPaths.makePath( path, vpath ) );
+        Node node = new Node( vpath, new String( bytes, charset ), 0 );
+        nodes.add( node );
+      }
+      return nodes;
+    } catch ( Exception e ) {
+      log.error( "getChildNodes path failed:{}", path );
+      throw new ZKOperateException( "getChildNodes path failed:" + path, e );
     }
+  }
 
-	public List<Node> getChildNodes(String path) {
-        Preconditions.checkNotNull(path, "path can't be null");
-        checkConnection();
-        try {
-            List<String> paths = client.getChildren().forPath(path);
-            if (CollectionUtils.isEmpty(paths)) {
-                return Lists.newArrayList();
-            }
-            List<Node> nodes = new ArrayList<Node>(paths.size());
-            for (String vpath : paths) {
-                byte[] bytes = client.getData().forPath(ZKPaths.makePath(path, vpath));
-                Node node = new Node(vpath, new String(bytes, charset), 0);
-                nodes.add(node);
-            }
-            return nodes;
-        } catch (Exception e) {
-            log.error("getChildNodes path failed:{}", path);
-            throw new ZKOperateException("getChildNodes path failed:" + path, e);
-        }
+  public void deleteNode( String path ) {
+    Preconditions.checkNotNull( path, "path can't be null" );
+    checkConnection();
+    try {
+      client.delete().deletingChildrenIfNeeded().inBackground().forPath( path );
+    } catch ( Exception e ) {
+      log.error( "deleteNode path failed:{}", path );
+      throw new ZKOperateException( "deleteNode path failed:" + path, e );
     }
+  }
 
-	public void deleteNode(String path) {
-        Preconditions.checkNotNull(path, "path can't be null");
-        checkConnection();
-        try {
-            client.delete().deletingChildrenIfNeeded().inBackground().forPath(path);
-        } catch (Exception e) {
-            log.error("deleteNode path failed:{}", path);
-            throw new ZKOperateException("deleteNode path failed:" + path, e);
-        }
+  public void setNodeValue( String path, String value ) {
+    Preconditions.checkNotNull( path, "path can't be null" );
+    Preconditions.checkNotNull( value, "value can't be null" );
+    checkConnection();
+    try {
+      client.setData().forPath( path, value.getBytes( charset ) );
+    } catch ( Exception e ) {
+      log.error( "setNodeValue path failed:{},value:{}", path, value );
+      throw new ZKOperateException( "setNodeValue path failed:" + path, e );
     }
+  }
 
-	public void setNodeValue(String path, String value) {
-        Preconditions.checkNotNull(path, "path can't be null");
-        Preconditions.checkNotNull(value, "value can't be null");
-        checkConnection();
-        try {
-            client.setData().forPath(path, value.getBytes(charset));
-        } catch (Exception e) {
-            log.error("setNodeValue path failed:{},value:{}", path, value);
-            throw new ZKOperateException("setNodeValue path failed:" + path, e);
-        }
+  public void registerNodeListener( String path, ZkNodeListener listener ) {
+    Preconditions.checkNotNull( path, "path can't be null" );
+    Preconditions.checkNotNull( listener, "listener can't be null" );
+    checkConnection();
+    log.info( "registerNodeListener for path:{},listener:{}", path, listener.getClass().getSimpleName() );
+    DefaultNodeCacheListener nodeCacheListener = watchMap.get( path );
+    if ( null == nodeCacheListener ) {
+      nodeCacheListener = new DefaultNodeCacheListener( path, this.getCuratorFramework() );
+      watchMap.put( path, nodeCacheListener );
     }
+    nodeCacheListener.registerNodeListener( path, listener );
+    // 注册对父节点的监听，因为删除是触发的父亲节点的事件
+    String parentPath = ZkPathUtils.getParentPath( path );
+    nodeCacheListener.registerNodeListener( parentPath, listener );
+  }
 
-	public void registerNodeListener(String path, ZkNodeListener listener) {
-        Preconditions.checkNotNull(path, "path can't be null");
-        Preconditions.checkNotNull(listener, "listener can't be null");
-        checkConnection();
-        log.info("registerNodeListener for path:{},listener:{}", path, listener.getClass().getSimpleName());
-        DefaultNodeCacheListener nodeCacheListener = watchMap.get(path);
-        if (null == nodeCacheListener) {
-            nodeCacheListener = new DefaultNodeCacheListener(path, this.getCuratorFramework());
-            watchMap.put(path, nodeCacheListener);
-        }
-        nodeCacheListener.registerNodeListener(path, listener);
-        //注册对父节点的监听，因为删除是触发的父亲节点的事件
-        String parentPath=ZkPathUtils.getParentPath(path);
-        nodeCacheListener.registerNodeListener(parentPath, listener);
-    }
+  public boolean isConnected() {
+    return isConnected;
+  }
 
-	public boolean isConnected() {
-        return isConnected;
-    }
+  public void setConnected( boolean isConnected ) {
+    this.isConnected = isConnected;
+  }
 
-	public void setConnected(boolean isConnected) {
-        this.isConnected = isConnected;
-    }
+  public CuratorFramework getCuratorFramework() {
+    return client;
+  }
 
-	public CuratorFramework getCuratorFramework() {
-        return client;
+  public void shutdown() {
+    isConnected = false;
+    if ( null != client ) {
+      client.close();
     }
+    this.watchMap.clear();
+    zkConnectionListeners.clear();
+  }
 
-	public void shutdown() {
-        isConnected = false;
-        if (null != client) {
-            client.close();
-        }
-        this.watchMap.clear();
-        zkConnectionListeners.clear();
+  private void checkConnection() {
+    if ( !isConnected() ) {
+      log.error( "with zk server connection loss,please check" );
+      throw new ZKConnectException( "with zk server connection loss,please check!!!!" );
     }
+  }
 
-    private void checkConnection() {
-        if (!isConnected()) {
-            log.error("with zk server connection loss,please check");
-            throw new ZKConnectException("with zk server connection loss,please check!!!!");
-        }
-    }
+  public void s() {
+    this.watchMap.clear();
+    isConnected = false;
+  }
 
-    public void s() {
-        this.watchMap.clear();
-        isConnected = false;
-    }
+  public List<ZKConnectionListener> getAllZKConnectionListeners() {
+    return zkConnectionListeners;
+  }
 
-    public List<ZKConnectionListener> getAllZKConnectionListeners() {
-        return zkConnectionListeners;
-    }
+  public void registerConnectionListener( ZKConnectionListener listener ) {
+    Preconditions.checkNotNull( listener, "listener can't be null" );
+    zkConnectionListeners.add( listener );
+  }
 
-    public void registerConnectionListener(ZKConnectionListener listener) {
-        Preconditions.checkNotNull(listener, "listener can't be null");
-        zkConnectionListeners.add(listener);
+  @Override
+  public boolean isExsit( String path ) {
+    Preconditions.checkNotNull( path, "path can't be null" );
+    checkConnection();
+    Stat stat = null;
+    try {
+      stat = client.checkExists().forPath( path );
+    } catch ( Exception e ) {
+      log.error( "isExsit path failed:{},value:{}", path );
+      throw new ZKOperateException( "isExsit path failed:" + path, e );
     }
-    public boolean isExsit(String path) {
-        Preconditions.checkNotNull(path, "path can't be null");
-        checkConnection();
-        Stat stat = null;
-        try {
-            stat = client.checkExists().forPath(path);
-        } catch (Exception e) {
-            log.error("isExsit path failed:{},value:{}", path);
-            throw new ZKOperateException("isExsit path failed:" + path, e);
-        }
-        return null != stat;
-    }
+    return null != stat;
+  }
 
-    @Override
-    public void createNode( String path, String value, org.apache.zookeeper.CreateMode mode ) {
-      // TODO Auto-generated method stub
-      
-    }
-
-    @Override
-    public void removeAllWhenConnectionLost() {
-      // TODO Auto-generated method stub
-      
-    }
+  @Override
+  public void removeAllWhenConnectionLost() {
+    this.watchMap.clear();
+    isConnected = false;
+  }
 }

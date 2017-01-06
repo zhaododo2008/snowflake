@@ -3,10 +3,10 @@ package com.zhaododo.core.zk.client;
 import java.util.List;
 
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.zookeeper.CreateMode;
 
 import com.zhaododo.core.zk.listener.ZKConnectionListener;
 import com.zhaododo.core.zk.listener.ZkNodeListener;
+import com.zhaododo.core.zk.model.CreateMode;
 import com.zhaododo.core.zk.model.Node;
 
 public interface ZKClusterClient {
