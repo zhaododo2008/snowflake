@@ -33,5 +33,7 @@
   	<module>snow-service</module>
     <module>snow-web</module>
     <module>snow-core</module>
+    <module>snow-core-zk</module>
+    <module>snow-core-rest-server</module>
   </modules>
 </project>
